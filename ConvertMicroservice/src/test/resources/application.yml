@@ -1,0 +1,54 @@
+server:
+  port: 0
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+spring:
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+      group-id: files
+  application:
+    name: convert
+  messages:
+    encoding: UTF-8
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  # driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver https://stackoverflow.com/questions/75853763/spring-boot-testcontainers-postgresql-lunches-multiple-instances
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  http:
+    client:
+      read-timeout: 35m # таймаут 35 минут для генерации ответа
+  ai:
+    ollama:
+      chat:
+        model: saiga:latest
+      base-url: 'http://localhost:11434'
+    embedding:
+      chunk:
+        max-size: 512
+      transformer:
+        onnx:
+          model-uri: file:multilingual\model.onnx
+        tokenizer:
+          uri: file:multilingual\tokenizer.json
+          options:
+            maxLength: 512 # ограничение multilingual-e5-large
+            modelMaxLength: 512 # ограничение multilingual-e5-large
+main:
+  image-filter: true
+  make-chunk-summary: false
+  file:
+    folder-watcher-type: 'POLLING' # MONITORING or POLLING
+    full-folder-indexing: true
+    full-folder-indexing-by-kafka: true
+    convert-to-text: true
+    root:
+      path: ConvertMicroservice\src\test\resources\test-dir, ConvertMicroservice\src\test\resources\test2-dir
+      except: ConvertMicroservice\src\test\resources\test-dir\test-except
+    image-root: 'ConvertMicroservice\src\test\resources\test-image'
+    pdf-root : 'ConvertMicroservice\src\test\resources\test-pdf'
