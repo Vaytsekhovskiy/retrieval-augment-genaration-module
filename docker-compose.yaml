@@ -1,0 +1,179 @@
+version: '3.8'
+networks:
+  dev:
+services:
+  bot-microservice:
+    image: vaytsehovskiy/bot:latest
+    networks:
+      - dev
+    depends_on:
+      - main-microservice
+      - ollama
+    environment:
+      # Конфигурация БД
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://service-db:5432/postgres
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=89534536403
+      # Конфигурация чат бота
+      - SPRING_AI_CHAT_MEMORY_MESSAGES=2
+      - SPRING_AI_OLLAMA_BASE-URL=http://ollama:11434
+      - SPRING_AI_OLLAMA_CHAT_MODEL=saiga:latest
+      - SPRING_AI_PROMPT=/app/sysprompt.txt
+      - SPRING_AI_RAG-PROMPT=/app/ragprompt.txt
+      # Эмбеддинг модель
+      - SPRING_AI_EMBEDDING_TRANSFORMER_ONNX_MODEL-URI=file:/app/multilingual/model.onnx
+      - SPRING_AI_EMBEDDING_TRANSFORMER_TOKENIZER_URI=file:/app/multilingual/tokenizer.json
+      # Сервер
+      - MICROSERVICE_GATEWAY=http://api-gateway:8765
+      - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - EUREKA_INSTANCE_HOSTNAME=bot
+      - EUREKA_INSTANCE_PREFER-IP-ADDRESS=true
+  convert-microservice:
+    image: vaytsehovskiy/convert:latest
+    networks:
+      - dev
+    volumes:
+      - type: bind
+        source: /
+        target: /app/data
+    depends_on:
+      - kafka
+      - service-db
+      - discovery-server
+    environment:
+      # Слежка за базой знаний
+      - MAIN_MOUNT-POINT=/app/data
+      - MAIN_FILE_FOLDER-WATCHER-TYPE=POLLING
+      - MAIN_FILE_ROOT_PATH=/app/data/ISO9001 и 13485/ИП РИ ОИ СТО, /app/data/Техническая документация на продукцию/НТИ, /app/data/Департамент разработки ТР/Документация
+      - MAIN_FILE_ROOT_EXCEPT=/app/data/ISO9001 и 13485/ИП РИ ОИ СТО/Журналы регистрации
+      - MAIN_FILE_PDF-ROOT=/app/pdf
+      - MAIN_FILE_IMAGE-ROOT=/app/image
+      - MAIN_FILE_FULL-FOLDER-INDEXING=true
+      - MAIN_FILE_FULL-FOLDER-INDEXING-BY-KAFKA=true # отсылать отслеженные документы в кафку или делать напрямую
+      - MAIN_FILE_CONVERT-TO-TEXT=true
+      # KAFKA
+      - SPRING_KAFKA_CONSUMER_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_KAFKA_PRODUCER_BOOTSTRAP_SERVERS=kafka:9092
+      # БД
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://service-db:5432/postgres
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=89534536403
+      # Эмбеддинг модель
+      - SPRING_AI_EMBEDDING_TRANSFORMER_ONNX_MODEL-URI=file:/app/multilingual/model.onnx
+      - SPRING_AI_EMBEDDING_TRANSFORMER_TOKENIZER_URI=file:/app/multilingual/tokenizer.json
+      - SPRING_AI_EMBEDDING_CHUNK_MAX-SIZE=512
+      # Сервер
+      - MICROSERVICE_GATEWAY=http://api-gateway:8765
+      - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - EUREKA_INSTANCE_HOSTNAME=convert
+      - EUREKA_INSTANCE_PREFER-IP-ADDRESS=true
+      # Конфигурация моделей ИИ
+      - SPRING_AI_OLLAMA_BASE-URL=http://ollama:11434
+      - SPRING_AI_OLLAMA_CHAT_MODEL=saiga:latest
+      - MAIN_MAKE-CHUNK-SUMMARY=false
+      - MAIN_IMAGE-FILTER=true
+  main-microservice:
+    image: vaytsehovskiy/main:latest
+    networks:
+      - dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      - service-db
+      - api-gateway
+    environment:
+      - SERVER_PORT=8080
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://service-db:5432/postgres
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=89534536403
+      - MICROSERVICE_GATEWAY=http://localhost:8765
+      # Ты перепутал небо со звёздами, отражёнными ночью в поверхности пруда
+      - MICROSERVICE_INTERNAL=http://api-gateway:8765 # Опять же костыль
+      - SPRING_LDAP_EXTERNAL_ENABLED=false
+      - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - EUREKA_INSTANCE_HOSTNAME=main
+      - EUREKA_INSTANCE_PREFER-IP-ADDRESS=true
+  api-gateway:
+    image: vaytsehovskiy/gateway:latest
+    networks:
+      - dev
+    ports:
+      - "8765:8765"
+    depends_on:
+      - discovery-server
+    environment:
+      - SERVER_PORT=8765
+      - EUREKA_INSTANCE_HOSTNAME=api-gateway
+      - EUREKA_INSTANCE_PREFER-IP-ADDRESS=true
+      - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - LOGGING_LEVEL_ORG_VCED_APIGATEWAY=DEBUG
+  discovery-server:
+    image: vaytsehovskiy/discovery:latest
+    networks:
+      - dev
+    ports:
+      - "8761:8761"
+    environment:
+      - SERVER_PORT=8761
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all # alternatively, use `count: all` for all GPUs
+              capabilities: [ gpu ]
+    environment:
+      # Здесь можно настраивать макс кол-во моделей
+      # не перезапуская контейнер заново
+      OLLAMA_MAX_LOADED_MODELS: 1
+      OLLAMA_NUM_PARALLEL: 4
+    networks:
+      - dev
+    image: ollama
+    container_name: ollama
+    entrypoint: ["/bin/sh", "/tmp/run_ollama.sh"]
+    expose:
+      - 11434/tcp
+    ports:
+      - "11434:11434"
+    volumes:
+      - db-data:/root/.ollama
+    restart: always
+  service-db:
+    image: pgvector:latest
+    networks:
+      - dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 89534536403
+    ports:
+      - "15432:5432"
+    volumes:
+      - db-data:/var/lib/pgvector/data
+    restart: unless-stopped
+  kafka:
+    image: apache/kafka
+    networks:
+      - dev
+    ports:
+      - "9092:9092"
+    hostname: kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://localhost:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+
+volumes:
+  db-data:
+    driver:
+      local

@@ -1,0 +1,71 @@
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### LOGGING ###
+*.log
+
+### DEV-OPS ###
+*.tar
+*.dump
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+## AI ##
+multilingual
+./multilingual
+model.onnx_data
+./model.onnx_data
+*.gguf
+model.onnx
+tokenizer.json
+./model.onnx
+./tokenizer.
+.djl.ai/pytorch
+.djl.ai/tokenizers
+convert.tar
+crawler
+ConvertMicroservice/ImageClassifier
+
+## FRONT ##
+MainMicroservice/src/main/resources/templates/first.html
+MainMicroservice/src/main/resources/templates/styles.css
+
+##Python##
+Python/OpenJDK-23
+Python/Scripts
+Python/include
+Python/config.py
+Python/Lib
+ConvertMicroservice/src/main/java/org/vced/convertmicroservice/converter/python/Include
+ConvertMicroservice/src/main/java/org/vced/convertmicroservice/converter/python/Lib
+ConvertMicroservice/src/main/java/org/vced/convertmicroservice/converter/python/Scripts
+ConvertMicroservice/src/main/java/org/vced/convertmicroservice/converter/python/ImageClassifier.pth

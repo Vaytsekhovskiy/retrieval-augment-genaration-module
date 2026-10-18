@@ -1,0 +1,73 @@
+server:
+  port: 8080
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+spring:
+  datasource:
+    password: '89534536403'
+    username: postgres
+    url: jdbc:postgresql://localhost:5432/postgres
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+  freemarker:
+    template-loader-path: classpath:/templates/
+    suffix: .ftlh
+    cache: false
+    devtools:
+      restart:
+        enabled: true
+    expose-request-attributes: true
+    expose-session-attributes: true
+    settings:
+      template_update_delay: 0
+      default_encoding: UTF-8
+  mvc:
+    static-path-pattern: /**
+  web:
+    resources:
+      static-locations: 
+        - classpath:/static/
+        - file:./uploads/
+  ldap:
+    embedded:
+      ldif: classpath:users.ldif
+      base-dn: dc=springframework,dc=org
+      port: 10390
+      url: ldap://localhost:10390
+      user-dn-pattern: uid={0},ou=people 
+      group-search-base: ou=groups
+      validation:
+        enabled: false
+    external:
+      enabled: false
+      url: ldap://dc4-srv.elektron.spb.su/
+      domain: elektron.spb.su
+      domain-sid: S-1-5-21-842925246-2077806209-1177238915
+      search-base: dc=elektron,dc=spb,dc=su # базовый адрес, от которого идёт поиск групп. Обычно это DN домена
+  application:
+    name: main
+  messages:
+    encoding: UTF-8
+microservice:
+  gateway: 'http://localhost:8765'
+  internal: 'http://localhost:8765' # для запроса получения файлов (ResponseController) костыль( позже исправлю
+youtrack: # добавлять во все микросервисы, обращающиеся к youtrack
+  api:
+    enabled: true
+    base-url: https://yt.elektron.ru
+    hub-url: https://yt.elektron.ru/hub
+    token: perm:c3ozNzkwNw==.NTYtMTM=.Nousu8q4b8yYZqXTlUGE1eM0HzD5GW # Не распространять! Токен польз-ля sz37909 для доступа к REST API YouTrack
+    # Вне прода лучше юзать свой токен, создаётся в настройках профиля YouTrack
+dialogue:
+  cache:
+    ttl-seconds: 3600 # Время жизни кэша диалогов в секундах
+# logging:
+#   level:
+#     org.springframework.security: DEBUG
+#     org.springframework.ldap: DEBUG

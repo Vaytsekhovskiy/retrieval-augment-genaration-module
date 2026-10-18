@@ -1,0 +1,182 @@
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: "Inter", sans-serif;
+}
+
+
+.gradient-background {
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(90deg, #FFFFFF 0%, #DCEFEF 70%, #C5E5E4 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.lines {
+    width: 100%;
+    height: 100vh;
+    background-image: url('/images/Group.svg');
+    display: flex;
+    background-repeat: no-repeat;
+    background-position: center 200px;
+    background-size: cover;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.content {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    margin-top: -150px;
+}
+
+.logo {
+    margin-right: 252px; /* Отступ между логотипом и формой */
+}
+
+@media (max-width: 1200px) {
+    .logo {
+      margin-right: 40px;
+    }
+}
+
+.logo img {
+    width: 574px;
+    height: auto; /* Сохраняем пропорции */
+}
+
+.login-form {
+    padding: 20px; /* Добавляет внутренние отступы вокруг формы */
+    max-width: 320px; /* Ограничивает максимальную ширину формы */
+    width: 100%; 
+}
+
+.input-box {
+    margin-bottom: 15px;
+}
+
+.label-container {
+    display: flex; /* Включает Flexbox для контейнера с подписью и ссылкой */
+    justify-content: space-between; /* Распределяет пространство между элементами */
+    align-items: center; /* Выравнивает элементы по вертикали */
+    margin-bottom: 5px; /* Добавляет отступ снизу у контейнера */
+    font-size: 12px;
+}
+
+#label-for-email{
+    display: flex;
+    font-size: 12px;
+    position: left;
+    margin-bottom: 5px; /* Добавляет отступ снизу у контейнера */
+}
+
+.forgot-password {
+    color: #20A19B; /* Цвет ссылки */
+    text-decoration: none; /* Убираем подчеркивание */
+}
+
+.forgot-password:hover {
+    text-decoration: underline; /* Подчеркиваем при наведении */
+}
+
+input {
+    border: none;
+    width: 100%;
+    height: 44px;
+    padding: 11px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    font-family: "Inter", sans-serif;
+    
+    
+    box-sizing: border-box;
+    background-blend-mode: luminosity;
+    background: #0000000D;
+}
+
+input:focus {
+    outline: none;
+}
+
+input:hover {
+    background: #3b3b3b0d; 
+}
+
+.password-container {
+    position: relative; /* Устанавливает относительное позиционирование для контейнера */
+}
+
+.register-link {
+    font-size: 12px;
+}
+
+.register-link a {
+    font-size: 12px;
+    color: #20A19B; /* Цвет ссылки */
+    text-decoration: none; /* Убираем подчеркивание */
+}
+
+.register-link a:hover {
+    text-decoration: underline; /* Подчеркиваем при наведении */
+}
+
+#togglePassword {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+.login-form button {
+    width: 100%; /* Задает ширину кнопки на 100% от родительского контейнера */
+    padding: 10px; /* Добавляет внутренние отступы внутри кнопки */
+    background-color: #00A19A; /* Задает цвет фона кнопки */
+    color: white; /* Задает цвет текста кнопки */
+    border: none; /* Убирает границу у кнопки */
+    border-radius: 5px; /* Скругляет углы кнопки */
+    font-size: 16px; /* Задает размер шрифта текста кнопки */
+    cursor: pointer; /* Меняет курсор на указатель при наведении */
+    font-family: "Inter", sans-serif;
+}
+
+.login-form button:hover {
+    background-color: #33B4AE /* Меняет цвет фона кнопки при наведении */
+}
+
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 11px;
+    margin-bottom: 20px;
+    margin-top: 20px;
+    background-color: #FFF2F0;
+    border: none;
+    border-radius: 8px;
+    color: #FF4D4F;
+    font-size: 16px;
+    line-height: 1.5;
+    animation: fadeIn 0.3s ease-in-out;
+    font-family: "Inter", sans-serif;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

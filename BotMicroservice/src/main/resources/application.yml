@@ -1,0 +1,89 @@
+
+server:
+    port: 0
+eureka:
+    instance:
+        hostname: localhost
+    client:
+        service-url:
+            defaultZone: http://localhost:8761/eureka
+spring:
+    application:
+        name: bot
+        print-images: true
+    ai:
+        request:
+            ignore-authorities: false
+            # false: Пользователю доступны только те чанки, к которым он имеет доступ
+            # true: Пользователю доступны все чанки
+            topK: 4
+            similarity-threshold: 0.8075
+              # исходя из вопросов: "Как сбросить пароль?", "Как сделать сальто?", "Как приготовить рис?".
+              # Для этих вопросов на момент 29.09.2025 нет ни одного подходящего чанка =>
+              # ни один чанк не подходит. Score для самого "подходящего чанка" для вопросов
+            # = 0.80748
+        embedding:
+            dimension: 1024
+            transformer:
+                onnx:
+                    model-uri: file:multilingual\model.onnx
+                tokenizer:
+                    uri: file:multilingual\tokenizer.json
+                    options:
+                        modelMaxLength: 512 # ограничение multilingual-e5-large
+        chat:
+            memory:
+              messages: 2 # количество последних сообщений, которые попадают в контекст ИИ. Слишком мало - плохой контекст
+              # слишком много - контекст модели забивается => ужасные ответы
+              # СТАВИТЬ НЕЧЁТНОЕ КОЛИЧЕСТВО НЕ ИМЕЕТ СМЫСЛА! При чётном кол-ве в нейростеть подаются пары диалогов
+              # пользователь - нейросеть. При нечётном первая пара пользователь - нейросеть будет подаваться без
+              # вопроса от юзера => обрезанный контекст
+              repository:
+                  jdbc:
+                      initialize-schema: always
+        ollama:
+            chat:
+                model: saiga:latest
+                temperature: 0.3
+                reasoning-effort: ""
+                max-tokens: 1024
+                top-k: 40
+                top-p: 0.9
+                min-p: 0.0
+                frequency-penalty: 0.0
+                presence-penalty: 0.0
+                mirostat: 0
+                repeat-last-n: 64
+                tfs-z: 1
+                repeat-penalty: 1.1
+                use-mmap: true
+                use-mlock: true
+                format: ""
+                num-keep: 512
+                num-ctx: 16384
+                num-batch: 512
+                num-thread: 2
+                num-gpu: 99
+                keep-alive: 5m
+            base-url: 'http://localhost:11434'
+        prompt: BotMicroservice/src/main/resources/sysprompt.txt
+        rag-prompt: BotMicroservice/src/main/resources/ragprompt.txt
+    datasource:
+        password: '89534536403'
+        username: postgres
+        url: jdbc:postgresql://localhost:5432/postgres
+    jpa:
+        database-platform: org.hibernate.dialect.PostgreSQLDialect
+        hibernate:
+            ddl-auto: update
+microservice:
+    gateway: 'http://localhost:8765'
+youtrack: # добавлять во все микросервисы, обращающиеся к youtrack
+    api:
+        enabled: true
+        base-url: https://yt.elektron.ru
+        token: perm:c3ozNzkwNw==.NTYtMTM=.Nousu8q4b8yYZqXTlUGE1eM0HzD5GW # Не распространять! Токен польз-ля sz37909 для доступа к REST API YouTrack
+        # Вне прода лучше юзать свой токен, создаётся в настройках профиля YouTrack
+logging:
+    level:
+      org.vced.botmicroservice: DEBUG

@@ -1,0 +1,35 @@
+server:
+  port: 0
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+spring:
+  application:
+    name: bot
+    embedding-algorithm: true
+    print-images: true
+  ai:
+    chat:
+      memory:
+        messages: 2
+    embedding:
+      transformer:
+        onnx:
+          model-uri: file:multilingual\model.onnx
+        tokenizer:
+          uri: file:multilingual\tokenizer.json
+    ollama:
+      chat:
+        model: saiga:latest
+      base-url: 'http://localhost:11434'
+    prompt: BotMicroservice/src/main/resources/sysprompt.txt
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  # driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver https://stackoverflow.com/questions/75853763/spring-boot-testcontainers-postgresql-lunches-multiple-instances
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+microservice:
+  gateway: 'http://localhost:8765'

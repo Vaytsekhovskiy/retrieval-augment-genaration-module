@@ -1,0 +1,21 @@
+server:
+  port: 8765
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      httpclient:
+        max-initial-line-length: 16384
+        max-header-size: 16384
+      discovery:
+        locator:
+          enabled: true # redirect
+          lower-case-service-id: true

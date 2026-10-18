@@ -1,0 +1,18 @@
+FROM ./gigachat.gguf
+
+TEMPLATE """{{ if.System }}<|message_sep|> system<|role_sep|> {{.System }}{{ end }}
+{{ if.Prompt }}<|message_sep|> user<|role_sep|> {{.Prompt }}{{ end }}
+<|message_sep|> assistant<|role_sep|> {{.Response }}<|eot_id|>"""
+
+PARAMETER num_ctx 16384
+# ^ можно и 32768, по моим расчётам при OLLAMA_NUM_PARALLEL=4 должно помещаться даже с запасом
+PARAMETER temperature 0.3
+PARAMETER top_p 0.9
+PARAMETER repeat_penalty 1.1
+PARAMETER num_keep 256
+PARAMETER stop "<|message_sep|>"
+PARAMETER stop "<|role_sep|>"
+PARAMETER stop "<|eot_id|>"
+PARAMETER stop "<|end_header_id|>"
+PARAMETER stop "<|start_header_id|>"
+PARAMETER num_gpu 99
