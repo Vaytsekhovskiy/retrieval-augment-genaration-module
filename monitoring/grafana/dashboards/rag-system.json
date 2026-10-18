@@ -1,0 +1,100 @@
+{
+  "uid": "rag-system",
+  "title": "RAG system",
+  "tags": ["rag", "spring-boot"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "title": "Состояние сервисов (1 = доступен)",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 5},
+      "targets": [{"refId": "A", "expr": "up{job=\"spring-services\"}", "legendFormat": "{{instance}}"}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none"},
+      "fieldConfig": {"defaults": {"min": 0, "max": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []}
+    },
+    {
+      "id": 2,
+      "title": "Обработано документов всего",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 5},
+      "targets": [{"refId": "A", "expr": "sum(rag_documents_processed_total)", "legendFormat": "Документы"}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "value", "colorMode": "value", "graphMode": "area"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}, "overrides": []}
+    },
+    {
+      "id": 3,
+      "title": "Ошибки обработки документов всего",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 5},
+      "targets": [{"refId": "A", "expr": "sum(rag_documents_failed_total)", "legendFormat": "Ошибки"}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "value", "colorMode": "value", "graphMode": "area"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}, "overrides": []}
+    },
+    {
+      "id": 4,
+      "title": "HTTP запросы в секунду",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 5, "w": 12, "h": 8},
+      "targets": [{"refId": "A", "expr": "sum by (application) (rate(http_server_requests_seconds_count{uri!~\"/actuator.*\"}[5m]))", "legendFormat": "{{application}}"}],
+      "fieldConfig": {"defaults": {"unit": "reqps", "min": 0}, "overrides": []}
+    },
+    {
+      "id": 5,
+      "title": "HTTP 5xx в секунду",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 5, "w": 12, "h": 8},
+      "targets": [{"refId": "A", "expr": "sum by (application) (rate(http_server_requests_seconds_count{status=~\"5..\",uri!~\"/actuator.*\"}[5m]))", "legendFormat": "{{application}}"}],
+      "fieldConfig": {"defaults": {"unit": "reqps", "min": 0}, "overrides": []}
+    },
+    {
+      "id": 6,
+      "title": "HTTP p95 (5 мин)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 13, "w": 12, "h": 8},
+      "targets": [{"refId": "A", "expr": "histogram_quantile(0.95, sum by (le, application) (rate(http_server_requests_seconds_bucket{uri!~\"/actuator.*\"}[5m])))", "legendFormat": "{{application}}"}],
+      "fieldConfig": {"defaults": {"unit": "s", "min": 0}, "overrides": []}
+    },
+    {
+      "id": 7,
+      "title": "Среднее время генерации ответа LLM (5 мин)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 13, "w": 12, "h": 8},
+      "targets": [{"refId": "A", "expr": "rate(rag_llm_generation_seconds_sum[5m]) / clamp_min(rate(rag_llm_generation_seconds_count[5m]), 0.000001)", "legendFormat": "Среднее"}],
+      "fieldConfig": {"defaults": {"unit": "s", "min": 0}, "overrides": []}
+    },
+    {
+      "id": 8,
+      "title": "Память JVM: heap",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 21, "w": 12, "h": 8},
+      "targets": [{"refId": "A", "expr": "sum by (application) (jvm_memory_used_bytes{area=\"heap\"})", "legendFormat": "{{application}}"}],
+      "fieldConfig": {"defaults": {"unit": "bytes", "min": 0}, "overrides": []}
+    },
+    {
+      "id": 9,
+      "title": "Обработка документов и ошибки за 1 час",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 21, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "sum(increase(rag_documents_processed_total[1h]))", "legendFormat": "Обработано"},
+        {"refId": "B", "expr": "sum(increase(rag_documents_failed_total[1h]))", "legendFormat": "Ошибки"},
+        {"refId": "C", "expr": "sum(increase(rag_llm_generation_errors_total[1h]))", "legendFormat": "Ошибки LLM"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}, "overrides": []}
+    }
+  ]
+}

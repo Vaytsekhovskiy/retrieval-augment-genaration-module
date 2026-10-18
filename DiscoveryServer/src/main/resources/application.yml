@@ -1,6 +1,20 @@
 spring:
   application:
     name: discovery
+
+management:
+  server:
+    port: 9090
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 server:
   port: 8761
 eureka:

@@ -1,9 +1,11 @@
-version: '3.8'
 networks:
   dev:
 services:
   bot-microservice:
-    image: vaytsehovskiy/bot:latest
+    image: filestoembs/bot:local
+    build:
+      context: .
+      dockerfile: BotMicroservice/Dockerfile
     networks:
       - dev
     depends_on:
@@ -29,7 +31,10 @@ services:
       - EUREKA_INSTANCE_HOSTNAME=bot
       - EUREKA_INSTANCE_PREFER-IP-ADDRESS=true
   convert-microservice:
-    image: vaytsehovskiy/convert:latest
+    image: filestoembs/convert:local
+    build:
+      context: .
+      dockerfile: ConvertMicroservice/Dockerfile
     networks:
       - dev
     volumes:
@@ -73,7 +78,10 @@ services:
       - MAIN_MAKE-CHUNK-SUMMARY=false
       - MAIN_IMAGE-FILTER=true
   main-microservice:
-    image: vaytsehovskiy/main:latest
+    image: filestoembs/main:local
+    build:
+      context: .
+      dockerfile: MainMicroservice/Dockerfile
     networks:
       - dev
     ports:
@@ -94,7 +102,10 @@ services:
       - EUREKA_INSTANCE_HOSTNAME=main
       - EUREKA_INSTANCE_PREFER-IP-ADDRESS=true
   api-gateway:
-    image: vaytsehovskiy/gateway:latest
+    image: filestoembs/gateway:local
+    build:
+      context: .
+      dockerfile: ApiGateway/Dockerfile
     networks:
       - dev
     ports:
@@ -108,7 +119,10 @@ services:
       - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://discovery-server:8761/eureka
       - LOGGING_LEVEL_ORG_VCED_APIGATEWAY=DEBUG
   discovery-server:
-    image: vaytsehovskiy/discovery:latest
+    image: filestoembs/discovery:local
+    build:
+      context: .
+      dockerfile: DiscoveryServer/Dockerfile
     networks:
       - dev
     ports:
@@ -173,7 +187,41 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    networks:
+      - dev
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    networks:
+      - dev
+    depends_on:
+      - prometheus
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+
 volumes:
   db-data:
     driver:
       local
+  prometheus-data:
+  grafana-data:

@@ -3,6 +3,7 @@ package org.vced.mainmicroservice.authorize;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -100,6 +101,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, LoginSuccessHandler loginSuccessHandler) throws Exception {
         http
                 .authorizeHttpRequests((requests) -> requests
+                        .requestMatchers(EndpointRequest.to("health", "info", "prometheus")).permitAll()
                         .requestMatchers("/login", "/css/**", "/js/**", "/images/**", "/api/main/**").permitAll()
                         .requestMatchers("/api/bot/**").authenticated() // Защита эндпоинтов
                         .requestMatchers("/api/convert/**").authenticated() // Защита эндпоинтов

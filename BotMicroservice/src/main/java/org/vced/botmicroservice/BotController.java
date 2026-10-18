@@ -1,6 +1,8 @@
 package org.vced.botmicroservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -44,6 +46,7 @@ public class BotController {
     private final ObjectMapper mapper;
     private final BotConfigService botConfigService;
     private final ApplicationContext applicationContext;
+    private final MeterRegistry meterRegistry;
 
     /**
      * Метод для генерации ответа, с учетом запроса пользователя. Генерация ответа происходи асинхронно с помощью Flux<>
@@ -72,7 +75,9 @@ public class BotController {
                         chatMemory,
                         authenticationDataORM.getName());
 
-        return chatClient.prompt()
+        return Flux.defer(() -> {
+            Timer.Sample generationTimer = Timer.start(meterRegistry);
+            return chatClient.prompt()
                 .user(decodedRequest)
                 .system(botConfigService.getSystemPrompt())
                 .options(botConfigService.getOllamaOptions())
@@ -90,6 +95,7 @@ public class BotController {
                 .stream()
                 .content()
                 .take(Duration.ofSeconds(100))
+                .doOnError(error -> meterRegistry.counter("rag.llm.generation.errors").increment())
                 .onErrorResume(WebClientResponseException.class, _ -> Flux.just("ОШИБКА ГЕНЕРАЦИИ ОТВЕТА: " +
                         "Сервер перегружен, недостаточно ресурсов (RAM/VRAM), повторите запрос позже"))
                 .onErrorResume(WebClientRequestException.class, _ -> Flux.just("ОШИБКА ГЕНЕРАЦИИ ОТВЕТА: " +
@@ -97,7 +103,9 @@ public class BotController {
                 .map(obj -> "'" + obj + "'")
                 .concatWith(Flux.defer(questionAnswerAdvisor::getRetrievedImages))
                 .concatWith(Mono.just("END"))
-                .takeUntilOther(Flux.never());
+                .takeUntilOther(Flux.never())
+                .doFinally(signal -> generationTimer.stop(meterRegistry.timer("rag.llm.generation")));
+        });
     }
 
     @GetMapping("/dialogue/get")

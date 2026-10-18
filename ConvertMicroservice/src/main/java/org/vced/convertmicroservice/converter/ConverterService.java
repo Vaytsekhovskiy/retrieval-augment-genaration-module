@@ -3,6 +3,7 @@ package org.vced.convertmicroservice.converter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,11 +60,15 @@ public class ConverterService {
     private final ChunkSplitter chunkSplitter;
     private final ContentExtractorProvider contentExtractorProvider;
     private final AccessReader accessReader;
+    private final MeterRegistry meterRegistry;
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor(); // строгая очередь
 
     @PostConstruct
     public void initConverterService() {
+        meterRegistry.counter("rag.documents.processed");
+        meterRegistry.counter("rag.documents.deleted");
+        meterRegistry.counter("rag.documents.failed");
 
         // Zip bomb detected — POI считает,
         // что один из файлов внутри DOCX слишком сильно сжат,
@@ -100,6 +105,7 @@ public class ConverterService {
                     });
         } catch (JsonProcessingException e) {
             log.error("Incorrect kafka data topic received. Only accept path + FILE_STATE json");
+            meterRegistry.counter("rag.documents.failed").increment();
             return;
         }
         // блок try на весь метод нужен чтобы receive не крашил весь сервис
@@ -130,6 +136,8 @@ public class ConverterService {
                     // обновляем директорию, учитывая удалённый док
                     if (foundedDoc != null)
                         strangeDocumentHandler.handeStrangeDocuments(Path.of(foundedDoc.getOriginalPath()).getParent());
+                    if (foundedDoc != null)
+                        meterRegistry.counter("rag.documents.deleted").increment();
                     return;
                 }
                 // MODIFIED ...
@@ -141,8 +149,10 @@ public class ConverterService {
                 return;
             }
             convertDocument(filePath);
+            meterRegistry.counter("rag.documents.processed").increment();
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
+            meterRegistry.counter("rag.documents.failed").increment();
         } finally {
             FilePathAbstractService.removeConversionState(sentFilePath_State.getKey());
         }

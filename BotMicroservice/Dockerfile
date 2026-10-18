@@ -1,14 +1,16 @@
-FROM maven:3.9.8-sapmachine-22 as builder
+FROM maven:3.9.8-sapmachine-22 AS builder
 WORKDIR /app
-COPY . /app/.
-RUN mvn -f /app/pom.xml clean package
+COPY RagUtilLib /app/RagUtilLib
+COPY BotMicroservice /app/BotMicroservice
+RUN mvn -f /app/RagUtilLib/pom.xml -DskipTests install && \
+    mvn -f /app/BotMicroservice/pom.xml -DskipTests package
 
-FROM eclipse-temurin:22.0.2_9-jre as final
-COPY ../.djl.ai /root/.djl.ai
+FROM eclipse-temurin:22.0.2_9-jre AS final
+COPY .djl.ai /root/.djl.ai
 WORKDIR /app
-COPY BotMicroservice/target/BotMicroservice.jar /app/bot.jar
+COPY --from=builder /app/BotMicroservice/target/BotMicroservice.jar /app/bot.jar
 COPY BotMicroservice/src/main/resources/sysprompt.txt /app/sysprompt.txt
 COPY BotMicroservice/src/main/resources/ragprompt.txt /app/ragprompt.txt
-COPY ../model.onnx_data /app/model.onnx_data
-COPY ../multilingual /app/multilingual
+COPY model.onnx_data /app/model.onnx_data
+COPY multilingual /app/multilingual
 ENTRYPOINT ["java", "-jar", "bot.jar"]
