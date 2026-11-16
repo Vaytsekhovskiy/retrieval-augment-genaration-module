@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  maven:
+    name: Maven build and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '22'
+          cache: maven
+      - name: Build and install RagUtilLib
+        run: mvn -B -ntp -f RagUtilLib/pom.xml clean install
+      - name: Build and test Java services
+        run: |
+          for module in DiscoveryServer ApiGateway MainMicroservice ConvertMicroservice BotMicroservice; do
+            mvn -B -ntp -f "$module/pom.xml" clean verify
+          done
+
+  monitoring:
+    name: Compose and monitoring smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      COMPOSE_FILE: docker-compose.yaml:.github/ci/compose.yaml
+      COMPOSE_PROJECT_NAME: rag-ci
+      GRAFANA_ADMIN_PASSWORD: local-ci-only
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Validate Compose and Prometheus configuration
+        run: |
+          docker compose -f docker-compose.yaml config --quiet
+          docker compose config --quiet
+          docker compose run --rm --no-deps --entrypoint /bin/promtool prometheus \
+            check config /etc/prometheus/prometheus.yml
+      - name: Start DiscoveryServer, Prometheus and Grafana
+        run: docker compose up --build -d discovery-server prometheus grafana
+      - name: Check scraped JVM metric and provisioned dashboard
+        run: |
+          prometheus_url="http://$(docker compose port prometheus 9090)"
+          grafana_url="http://$(docker compose port grafana 3000)"
+          query='jvm_memory_used_bytes{job="spring-services",instance="discovery-server:9090"}'
+          for attempt in {1..40}; do
+            if curl -fsS --max-time 5 --get --data-urlencode "query=$query" \
+                 "$prometheus_url/api/v1/query" \
+                 | jq -e '.status == "success" and (.data.result | length > 0)' >/dev/null \
+               && curl -fsS --max-time 5 -u "admin:${GRAFANA_ADMIN_PASSWORD}" \
+                 "$grafana_url/api/datasources/uid/prometheus" \
+                 | jq -e '.type == "prometheus" and .url == "http://prometheus:9090"' >/dev/null \
+               && curl -fsS --max-time 5 -u "admin:${GRAFANA_ADMIN_PASSWORD}" \
+                 "$grafana_url/api/dashboards/uid/rag-system" \
+                 | jq -e '.dashboard.uid == "rag-system"' >/dev/null; then
+              echo 'Prometheus collected JVM metrics and Grafana provisioned the data source and dashboard.'
+              exit 0
+            fi
+            sleep 3
+          done
+          echo '::error::Monitoring check did not pass before the deadline.'
+          exit 1
+      - name: Show service logs on failure
+        if: ${{ failure() }}
+        run: docker compose logs --no-color discovery-server prometheus grafana
+      - name: Clean up containers and temporary volumes
+        if: ${{ always() }}
+        run: docker compose down --volumes --remove-orphans

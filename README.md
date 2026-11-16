@@ -127,3 +127,35 @@ docker compose up --build -d
 На дашборде отображаются доступность сервисов, количество HTTP-запросов и ошибок 5xx, 95-й процентиль времени ответа, среднее время потоковой генерации ответа LLM, счётчики обработки документов и использование памяти JVM. Счётчик `rag_documents_processed_total` увеличивается после завершения обработки документа (в том числе когда документ сохранён как «странный»); пропущенные временные и пустые файлы не учитываются. `rag_documents_failed_total` отражает ошибки обработки, которые дошли до внешнего обработчика, и некорректные сообщения Kafka. Таймер LLM записывается после завершения или отмены потока ответа.
 
 Конфигурация сбора находится в `monitoring/prometheus.yml`, настройки Grafana и дашборд — в `monitoring/grafana/`. Данные Prometheus и Grafana сохраняются в отдельных Docker-томах.
+
+## Непрерывная интеграция (CI)
+
+[GitHub Actions](.github/workflows/ci.yml) запускает workflow **CI** при `push` в `main`, открытии или обновлении pull request в `main`, а также вручную через **Actions → CI → Run workflow** после появления workflow в основной ветке.
+
+- **Maven build and tests** использует Temurin JDK 22. Сначала выполняется `clean install` для `RagUtilLib`, затем `clean verify` для `DiscoveryServer`, `ApiGateway`, `MainMicroservice`, `ConvertMicroservice` и `BotMicroservice`. Maven запускает активные тесты; интеграционные сценарии, закомментированные в исходниках, в этот прогон не входят.
+- **Compose and monitoring smoke test** проверяет Compose и конфигурацию Prometheus (`promtool check config`), собирает образ Eureka и запускает `discovery-server`, `prometheus`, `grafana`. Проверка проходит, когда Prometheus возвращает метрику памяти JVM от Eureka, а Grafana через API подтверждает наличие источника Prometheus и дашборда `RAG system`. При сбое workflow выводит логи, затем удаляет контейнеры и тома стенда. Остальные Java сервисы в этом стенде не запускаются, поэтому их цели Prometheus здесь могут быть `DOWN`.
+
+## Полная проверка перед демонстрацией
+
+1. Подготовьте файлы моделей из инструкции выше, доступный каталог с документацией и среду Docker с доступом к NVIDIA GPU для Ollama. В Compose проверьте источник монтирования `convert-microservice` и то, что настроенные каталоги внутри `/app/data` реально существуют. Для проверки ответа используйте учётную запись, которой разрешено чтение тестового документа.
+2. Если локальных образов `pgvector:latest` и `ollama:latest` ещё нет, соберите их из корня проекта. Для второго Dockerfile нужны **оба** файла — `saiga.gguf` и `gigachat.gguf` — и соответствующие `*.modelfile`.
+
+   ```powershell
+   docker build -t pgvector:latest -f DockerFileForDb/Dockerfile .
+   docker build -t ollama:latest -f OllamaDockerfile/Dockerfile .
+   ```
+
+3. Задайте свой `GRAFANA_ADMIN_PASSWORD`, затем выполните:
+
+   ```powershell
+   docker compose config --quiet
+   docker compose up --build -d
+   docker compose ps --all
+   docker compose exec ollama ollama list
+   ```
+
+   Если запуск останавливается с сообщением `Ports are not available`, проверьте, свободны ли опубликованные порты, в том числе `9090` для Prometheus и `3000` для Grafana.
+
+4. В веб-интерфейсе (`http://localhost:8080`) войдите в систему, добавьте или измените тестовый документ в наблюдаемом каталоге и дождитесь его индексации. Задайте вопрос, на который можно ответить по этому документу; проверьте найденный документ и содержание ответа.
+5. Откройте `http://localhost:9090/targets`: в полном стенде все пять целей `spring-services` должны быть `UP`. В Grafana (`http://localhost:3000`) откройте `RAG system` после обработки документа и запроса к модели, чтобы на панелях появились данные от этих операций.
+6. Для отчёта сохраните скриншоты `docker compose ps --all`, ответа с найденным документом, пяти целей Prometheus, дашборда Grafana и страницы запуска **CI** с результатами обоих заданий. Сделайте снимок `docker compose ps --all` после запуска модели и прикладных сервисов, чтобы он показывал итоговое состояние стенда.

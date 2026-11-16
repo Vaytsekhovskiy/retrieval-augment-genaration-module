@@ -69,3 +69,5 @@ ConvertMicroservice/src/main/java/org/vced/convertmicroservice/converter/python/
 ConvertMicroservice/src/main/java/org/vced/convertmicroservice/converter/python/Lib
 ConvertMicroservice/src/main/java/org/vced/convertmicroservice/converter/python/Scripts
 ConvertMicroservice/src/main/java/org/vced/convertmicroservice/converter/python/ImageClassifier.pth
+
+lsp
