@@ -98,6 +98,7 @@ public class ConverterService {
      */
     @KafkaListener(topics = "filesCheck", autoStartup = "${auto-startup:true}")
     public void receiveDocumentBlocking(@Payload String sentFile) {
+        System.out.println("Test sout");
         Map.Entry<String, FilePathAbstractService.FILE_STATE> sentFilePath_State;
         try {
             sentFilePath_State =
